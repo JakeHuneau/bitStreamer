@@ -43,8 +43,12 @@ impl<W: Write> Writer<W> {
             ));
         }
 
-        // Write the bits in order from MSB to LSB by masking everything except the bit we care about
+        // Write the bits in order from LSB to MSB by masking everything except the bit we care about
         for mask_location in 1..number_of_bits + 1 {
+            // assume 8 bit and we want 3 bits 00000111
+            // First: mask_location = 1 => mask = 1 << (3 - 1 = 2) = 100 => grab 00000100
+            // Second: mask_location = 2 => mask = 1 << (3 - 2 = 1) = 10 => grab 00000010
+            // Third: mask_location = 3 => mask = 1 << (3 - 3 = 0) = 1   => grab 00000001
             let mask: u128 = 1 << (number_of_bits - mask_location);
             self.write_bit(bits & mask != 0)?;
         }
@@ -135,6 +139,18 @@ mod test {
         let mut writer = Writer::new(cursor);
 
         writer.write_bits(251, 8).unwrap();
+        writer.write_bits(85, 8).unwrap();
+
+        writer.flush().unwrap();
+
+        assert_eq!(*writer.get_ref().get_ref().get_ref(), [251, 85]);
+    }
+
+    pub fn write_partial_bits() {
+        let cursor = Cursor::new(Vec::new());
+        let mut writer = Writer::new(cursor);
+
+        // 0101_0101
         writer.write_bits(85, 8).unwrap();
 
         writer.flush().unwrap();
